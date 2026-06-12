@@ -1,0 +1,35 @@
+services:
+
+  # ── Web Service (the API) ─────────────────────────────────────
+  - type: web
+    name: schedule-bot-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SLACK_WEBHOOK_URL
+        sync: false        # You set this manually in Render dashboard
+      - key: ADMIN_SECRET
+        sync: false        # You set this manually in Render dashboard
+      - key: CRON_SECRET
+        sync: false        # You set this manually in Render dashboard
+
+  # ── Cron Job (every Friday at 16:30 IST / 11:00 UTC) ─────────
+  - type: cron
+    name: schedule-bot-cron
+    runtime: node
+    plan: free
+    schedule: "0 11 * * 5"
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST
+      https://schedule-bot-api.onrender.com/api/cron/weekly
+      -H "Content-Type: application/json"
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        sync: false        # Must match the value on the web service above
