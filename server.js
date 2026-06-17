@@ -10,26 +10,40 @@ const PORT       = process.env.PORT || 3000;
 const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK_URL;
 const ADMIN_SECRET  = process.env.ADMIN_SECRET;
 const CRON_SECRET   = process.env.CRON_SECRET;
-const DB_PATH       = path.join(__dirname, 'data', 'state.json');
-const DAYS          = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DB_PATH = path.join(__dirname, 'data', 'state.json');
+
+// ── Seed data from TAM_Product_RTM.xlsx ───────────────────────
+const SEED_TOPICS = [
+  'SignUp & Login','DashBoard','Project','Project Settings',
+  'TestCases','Stepgroups','Elements','TestData Profile',
+  'Environments','Uploads','TestSuites','TestPlans',
+  'Run Results','Settings','Addons','Usage Details',
+  'Agents','Whats New','Help & Support','User Profile',
+  'Recorder','Debugger','Desktop',
+  'Salesforce Application',
+  'Co Pilot','AI Features'
+];
+
+const SEED_PEOPLE = [
+  'Sandeep','Hari Chandana','Nixon','Shivani',
+  'Osten','Mohan','Aarthy','Jadson'
+];
 
 app.use(cors());
 app.use(express.json());
 
-// ── State persistence ─────────────────────────────────────────────────────────
+// ── State helpers ──────────────────────────────────────────────
 function loadState() {
   if (!fs.existsSync(DB_PATH)) {
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    const init = { topics: [], people: [], topicDeck: [], deckUsed: 0 };
-    fs.writeFileSync(DB_PATH, JSON.stringify(init, null, 2));
-    return init;
+    // First boot — seed with RTM topics and team members
+    const s = { topics: [...SEED_TOPICS], people: [...SEED_PEOPLE], deck: [] };
+    fs.writeFileSync(DB_PATH, JSON.stringify(s, null, 2));
+    console.log(`[server] Seeded ${s.topics.length} topics and ${s.people.length} people`);
+    return s;
   }
-  try {
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-  } catch (e) {
-    console.error('[state] parse error:', e.message);
-    return { topics: [], people: [], topicDeck: [], deckUsed: 0 };
-  }
+  try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); }
+  catch { return { topics: [...SEED_TOPICS], people: [...SEED_PEOPLE], deck: [] }; }
 }
 
 function saveState(s) {
@@ -37,16 +51,15 @@ function saveState(s) {
   fs.writeFileSync(DB_PATH, JSON.stringify(s, null, 2));
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth middleware ────────────────────────────────────────────
 function auth(req, res, next) {
-  if (!ADMIN_SECRET)
-    return res.status(500).json({ error: 'ADMIN_SECRET env var not configured on server' });
+  if (!ADMIN_SECRET) return res.status(500).json({ error: 'ADMIN_SECRET not configured on server' });
   if (req.headers['x-admin-secret'] !== ADMIN_SECRET)
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Unauthorized — wrong ADMIN_SECRET' });
   next();
 }
 
-// ── Deck-shuffle engine ────────────────────────────────────────────────────────
+// ── Shuffle engine ─────────────────────────────────────────────
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -56,177 +69,173 @@ function shuffle(arr) {
   return a;
 }
 
-function pickTopics(state, count) {
-  if (state.topicDeck.length < count) {
-    const leftover = state.topicDeck;
-    const fresh = shuffle(state.topics.filter(t => !leftover.includes(t)));
-    state.topicDeck = [...leftover, ...fresh];
-    state.deckUsed = 0;
+function buildAssignments(state) {
+  const clone = JSON.parse(JSON.stringify(state));
+  // Refill deck when exhausted — no repeats until all topics used
+  if (clone.deck.length < clone.people.length * 2) {
+    clone.deck = shuffle([...clone.topics]);
   }
-  const picked = state.topicDeck.splice(0, count);
-  state.deckUsed += count;
-  return picked;
-}
-
-function buildSchedule(state) {
-  const s = JSON.parse(JSON.stringify(state)); // deep clone — preview safe
-  const people = shuffle([...s.people]);
-  const schedule = people.map((person, idx) => ({
+  const people = shuffle([...clone.people]);
+  const rows = people.map(person => ({
     person,
-    topics: pickTopics(s, 2),
-    day: DAYS[idx % DAYS.length]
+    topic1: clone.deck.shift() || '—',
+    topic2: clone.deck.shift() || '—',
   }));
-  return { schedule, committed: s };
+  return { rows, committedState: clone };
 }
 
-// ── Topics routes ─────────────────────────────────────────────────────────────
+// ── Topics routes ──────────────────────────────────────────────
 app.get('/api/topics', (req, res) => {
   const s = loadState();
-  res.json({ items: s.topics, deckUsed: s.deckUsed, total: s.topics.length });
+  res.json({ items: s.topics, deckRemaining: s.deck.length });
 });
 
 app.post('/api/topics', auth, (req, res) => {
-  const v = (req.body.value || '').trim();
-  if (!v) return res.status(400).json({ error: 'value required' });
+  const val = (req.body.value || '').trim();
+  if (!val) return res.status(400).json({ error: 'value required' });
   const s = loadState();
-  if (s.topics.includes(v)) return res.status(409).json({ error: 'Already exists' });
-  s.topics.push(v);
+  if (s.topics.includes(val)) return res.status(409).json({ error: 'Topic already exists' });
+  s.topics.push(val);
   saveState(s);
   res.json({ ok: true, items: s.topics });
 });
 
 app.post('/api/topics/remove', auth, (req, res) => {
-  const v = (req.body.value || '').trim();
+  const val = (req.body.value || '').trim();
   const s = loadState();
-  s.topics    = s.topics.filter(t => t !== v);
-  s.topicDeck = s.topicDeck.filter(t => t !== v);
+  s.topics = s.topics.filter(t => t !== val);
+  s.deck   = s.deck.filter(t => t !== val);
   saveState(s);
   res.json({ ok: true, items: s.topics });
 });
 
-// ── People routes ─────────────────────────────────────────────────────────────
+// ── People routes  ─────────────────────────────────────────────
+// NOTE: route is /api/people — NOT /api/persons
 app.get('/api/people', (req, res) => {
-  const s = loadState();
-  res.json({ items: s.people });
+  res.json({ items: loadState().people });
 });
 
 app.post('/api/people', auth, (req, res) => {
-  const v = (req.body.value || '').trim();
-  if (!v) return res.status(400).json({ error: 'value required' });
+  const val = (req.body.value || '').trim();
+  if (!val) return res.status(400).json({ error: 'value required' });
   const s = loadState();
-  if (s.people.includes(v)) return res.status(409).json({ error: 'Already exists' });
-  s.people.push(v);
+  if (s.people.includes(val)) return res.status(409).json({ error: 'Person already exists' });
+  s.people.push(val);
   saveState(s);
   res.json({ ok: true, items: s.people });
 });
 
 app.post('/api/people/remove', auth, (req, res) => {
-  const v = (req.body.value || '').trim();
+  const val = (req.body.value || '').trim();
   const s = loadState();
-  s.people = s.people.filter(p => p !== v);
+  s.people = s.people.filter(p => p !== val);
   saveState(s);
   res.json({ ok: true, items: s.people });
 });
 
-// ── Preview (non-destructive — does not commit deck state) ────────────────────
-app.get('/api/preview', (req, res) => {
-  const s = loadState();
-  if (!s.people.length || !s.topics.length)
-    return res.json({ schedule: [], warning: 'Add at least 1 person and 2 topics first.' });
-  if (s.topics.length < 2)
-    return res.json({ schedule: [], warning: 'Need at least 2 topics to assign 2 per person.' });
-  const { schedule } = buildSchedule(s);
-  res.json({ schedule });
+// ── Reset to seed data ─────────────────────────────────────────
+app.post('/api/reset', auth, (req, res) => {
+  const s = { topics: [...SEED_TOPICS], people: [...SEED_PEOPLE], deck: [] };
+  saveState(s);
+  res.json({ ok: true, message: 'Reset to RTM seed data', topics: s.topics.length, people: s.people.length });
 });
 
-// ── Notify — commits deck state and posts to Slack ────────────────────────────
+// ── Preview (non-destructive) ──────────────────────────────────
+app.get('/api/preview', (req, res) => {
+  const s = loadState();
+  if (!s.people.length)       return res.json({ rows: [], warning: 'No people added yet.' });
+  if (s.topics.length < 2)    return res.json({ rows: [], warning: 'Add at least 2 topics.' });
+  const { rows } = buildAssignments(s);
+  res.json({ rows });
+});
+
+// ── Send to Slack (manual from admin panel) ────────────────────
 app.post('/api/notify', auth, async (req, res) => {
   const s = loadState();
   if (!s.people.length || s.topics.length < 2)
-    return res.status(400).json({ error: 'Need at least 1 person and 2 topics' });
-  const { schedule, committed } = buildSchedule(s);
-  s.topicDeck = committed.topicDeck;
-  s.deckUsed  = committed.deckUsed;
-  saveState(s);
+    return res.status(400).json({ error: 'Not enough people or topics' });
+  const { rows, committedState } = buildAssignments(s);
   try {
-    await postToSlack(schedule);
-    res.json({ ok: true, schedule });
+    await postToSlack(rows);
+    saveState(committedState);
+    res.json({ ok: true, rows });
   } catch (e) {
-    console.error('[notify] Slack error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Cron endpoint — called by Render Cron every Friday ────────────────────────
+// ── Cron endpoint (called by GitHub Actions every Friday) ──────
 app.post('/api/cron/weekly', async (req, res) => {
   if (!CRON_SECRET || req.headers['x-cron-secret'] !== CRON_SECRET)
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Unauthorized — wrong CRON_SECRET' });
   const s = loadState();
   if (!s.people.length || s.topics.length < 2)
-    return res.status(400).json({ error: 'Insufficient data' });
-  const { schedule, committed } = buildSchedule(s);
-  s.topicDeck = committed.topicDeck;
-  s.deckUsed  = committed.deckUsed;
-  saveState(s);
+    return res.status(400).json({ error: 'Not enough data — add topics and people first' });
+  const { rows, committedState } = buildAssignments(s);
   try {
-    await postToSlack(schedule);
-    console.log('[cron] Schedule posted at', new Date().toISOString());
-    res.json({ ok: true });
+    await postToSlack(rows);
+    saveState(committedState);
+    res.json({ ok: true, rows });
   } catch (e) {
-    console.error('[cron] Slack error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Health check ──────────────────────────────────────────────────────────────
+// ── Health check ───────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', ts: new Date().toISOString() });
+  const s = loadState();
+  res.json({
+    status: 'ok',
+    ts: new Date().toISOString(),
+    topics: s.topics.length,
+    people: s.people.length,
+    deckRemaining: s.deck.length,
+  });
 });
 
-// ── Slack message formatter ────────────────────────────────────────────────────
-async function postToSlack(schedule) {
-  if (!SLACK_WEBHOOK) throw new Error('SLACK_WEBHOOK_URL is not set');
+// ── Slack formatter ────────────────────────────────────────────
+async function postToSlack(rows) {
+  if (!SLACK_WEBHOOK) throw new Error('SLACK_WEBHOOK_URL not configured on server');
 
-  const monday = getNextMonday();
-  const friday = new Date(monday);
-  friday.setDate(friday.getDate() + 4);
-  const fmt = d => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  const today   = new Date();
+  const pad     = n => String(n).padStart(2, '0');
+  const dateStr = `${pad(today.getDate())}/${pad(today.getMonth()+1)}/${today.getFullYear()}`;
 
-  const header  = `${'Person'.padEnd(22)} ${'Topics'.padEnd(46)} Day`;
-  const divider = `${'─'.repeat(22)} ${'─'.repeat(46)} ${'─'.repeat(9)}`;
-  const rows    = schedule.map(r =>
-    `${r.person.padEnd(22)} ${r.topics.join(', ').padEnd(46)} ${r.day}`
+  // Fixed-width table using Slack monospace code block
+  const col1 = Math.max(6,  ...rows.map(r => r.person.length)) + 2;
+  const col2 = Math.max(7,  ...rows.map(r => r.topic1.length)) + 2;
+  const col3 = Math.max(7,  ...rows.map(r => r.topic2.length)) + 2;
+
+  const sep  = `${'─'.repeat(col1)}┼${'─'.repeat(col2)}┼${'─'.repeat(col3)}`;
+  const head = `${'Person'.padEnd(col1)}│${'Topic 1'.padEnd(col2)}│${'Topic 2'.padEnd(col3)}`;
+  const body = rows.map(r =>
+    `${r.person.padEnd(col1)}│${r.topic1.padEnd(col2)}│${r.topic2.padEnd(col3)}`
   ).join('\n');
 
-  const totalTopics = schedule.reduce((a, r) => a + r.topics.length, 0);
   const text = [
-    `*📅 Schedule for ${fmt(monday)} – ${fmt(friday)}*`,
+    `*📅 TAM Weekly Module Assignments — ${dateStr}*`,
     '```',
-    header, divider, rows,
+    head,
+    sep,
+    body,
     '```',
-    `_2 topics per person · Deck resets after all ${totalTopics} slots filled_`
+    `_${rows.length} members · 2 topics each · shuffle deck restarts after all ${rows.reduce(()=>0)||26} topics are used_`
   ].join('\n');
 
   const r = await fetch(SLACK_WEBHOOK, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text }),
   });
-  if (!r.ok) throw new Error(`Slack ${r.status}: ${await r.text()}`);
+  if (!r.ok) throw new Error(`Slack returned ${r.status}: ${await r.text()}`);
 }
 
-function getNextMonday() {
-  const d = new Date();
-  const diff = (d.getDay() === 0) ? 1 : (8 - d.getDay()) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
+  const s = loadState();
   console.log(`[server] Running on port ${PORT}`);
   console.log(`[server] SLACK_WEBHOOK_URL : ${SLACK_WEBHOOK ? '✓' : '✗ MISSING'}`);
   console.log(`[server] ADMIN_SECRET      : ${ADMIN_SECRET  ? '✓' : '✗ MISSING'}`);
   console.log(`[server] CRON_SECRET       : ${CRON_SECRET   ? '✓' : '✗ MISSING'}`);
+  console.log(`[server] Topics loaded     : ${s.topics.length}`);
+  console.log(`[server] People loaded     : ${s.people.length}`);
 });
