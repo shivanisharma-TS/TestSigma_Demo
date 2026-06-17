@@ -2,128 +2,123 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Schedule Bot Admin</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TAM Schedule Bot Admin</title>
 <style>
-  :root{
-    --bg:#f7f9f8;--surface:#fff;--surface2:#f0f7f4;--border:#d4e8df;
-    --border2:#c0ddd4;--accent:#2db87a;--accent2:#1ea066;--al:#e8f7f0;
-    --warn:#e8441a;--text:#1a2e26;--muted:#6b8c7e;--muted2:#4a7060;
-    --mono:'IBM Plex Mono',monospace;--sans:'Inter',system-ui,sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:var(--sans);
-    font-size:14px;line-height:1.6;padding:36px 20px;}
-  h1{font-size:1.35rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px;}
-  .sub{color:var(--muted2);font-size:0.82rem;margin-bottom:28px;}
-  .wrap{max-width:1080px;margin:0 auto;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
-  .card{background:var(--surface);border:1px solid var(--border);
-    border-radius:10px;padding:20px 22px;}
-  .card h2{font-size:0.875rem;font-weight:700;margin-bottom:12px;color:var(--text);}
-  .row{display:flex;gap:8px;margin-bottom:10px;}
-  input[type=text],input[type=password]{flex:1;background:var(--bg);
-    border:1px solid var(--border);border-radius:6px;color:var(--text);
-    font-size:0.875rem;padding:8px 11px;outline:none;transition:border-color .2s;
-    font-family:var(--sans);}
-  input:focus{border-color:var(--accent);}
-  button{background:var(--accent);border:none;border-radius:6px;color:#fff;
-    cursor:pointer;font-size:0.82rem;font-weight:600;padding:8px 14px;
-    transition:background .15s;white-space:nowrap;font-family:var(--sans);}
-  button:hover{background:var(--accent2);}
-  button.danger{background:var(--warn);}
-  button.danger:hover{background:#c53a16;}
-  button.go{background:var(--accent2);}
-  button.go:hover{background:var(--accent);}
-  .list-box{max-height:220px;overflow-y:auto;margin-top:4px;}
+  :root{--bg:#0f1117;--sur:#1a1d27;--bor:#2e3147;--acc:#4f6ef7;--acc2:#6b84ff;
+        --grn:#3ecf8e;--red:#e05260;--amber:#f59e0b;--txt:#e8eaf0;--mut:#7b80a0;
+        --mono:'IBM Plex Mono',monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;font-size:14px;line-height:1.6;padding:24px 16px}
+  h1{font-size:1.25rem;font-weight:700;margin-bottom:2px}
+  .sub{color:var(--mut);font-size:.8rem;margin-bottom:24px}
+  .wrap{max-width:1100px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .card{background:var(--sur);border:1px solid var(--bor);border-radius:10px;padding:18px}
+  .card h2{font-size:.9rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .full{grid-column:1/-1}
+  .row{display:flex;gap:8px;margin-bottom:8px}
+  input[type=text],input[type=password]{flex:1;background:var(--bg);border:1px solid var(--bor);
+    border-radius:6px;color:var(--txt);font-size:.85rem;padding:7px 10px;outline:none}
+  input:focus{border-color:var(--acc)}
+  button{background:var(--acc);border:none;border-radius:6px;color:#fff;cursor:pointer;
+         font-size:.8rem;font-weight:600;padding:7px 14px;transition:background .15s}
+  button:hover{background:var(--acc2)}
+  button.danger{background:var(--red)}
+  button.success{background:var(--grn);color:#0f1117}
+  button.outline{background:transparent;border:1px solid var(--bor);color:var(--txt)}
+  button.amber{background:var(--amber);color:#0f1117}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .list-box{max-height:200px;overflow-y:auto;margin-top:4px;border:1px solid var(--bor);border-radius:6px}
   .item{display:flex;align-items:center;justify-content:space-between;
-    padding:7px 9px;border-radius:6px;font-size:0.855rem;}
-  .item:hover{background:var(--surface2);}
-  .item .del{background:transparent;color:var(--warn);font-size:1rem;
-    padding:0 5px;min-width:auto;border:none;}
-  .item .del:hover{background:rgba(232,68,26,.1);}
-  .empty{color:var(--muted);font-size:0.8rem;padding:8px 9px;}
-  .prev-card{grid-column:1/-1;}
-  table{width:100%;border-collapse:collapse;font-size:0.855rem;margin-top:10px;}
-  th{background:var(--al);color:var(--accent2);font-size:0.72rem;font-weight:700;
-    letter-spacing:.07em;padding:8px 12px;text-align:left;text-transform:uppercase;
-    border-bottom:2px solid var(--border);}
-  td{border-top:1px solid var(--border);padding:8px 12px;}
-  tr:hover td{background:var(--surface2);}
-  .badge{background:var(--al);border-radius:4px;color:var(--accent2);
-    display:inline-block;font-size:0.73rem;font-weight:600;
-    margin:1px 3px 1px 0;padding:1px 7px;border:1px solid var(--border);}
-  .acts{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
-  .cfg label{display:block;color:var(--muted);font-size:0.77rem;margin-bottom:3px;}
-  .cfg+.cfg{margin-top:10px;}
-  .deck{font-size:0.77rem;color:var(--muted);margin-top:6px;font-family:var(--mono);}
-  #toast{position:fixed;bottom:18px;right:18px;background:var(--surface);
-    border:1.5px solid var(--accent);color:var(--accent2);font-family:var(--mono);
-    font-size:0.78rem;font-weight:600;padding:9px 15px;border-radius:8px;
-    transform:translateY(60px);opacity:0;transition:all .25s;z-index:999;
-    box-shadow:0 4px 14px rgba(45,184,122,.15);}
-  #toast.show{transform:translateY(0);opacity:1;}
-  #toast.err{border-color:var(--warn);color:var(--warn);}
-  .warn-note{background:#fff0ec;border:1px solid #f9c4b4;border-radius:7px;
-    padding:10px 14px;font-size:0.83rem;color:#8a3020;margin:12px 0;}
+        padding:6px 10px;font-size:.83rem;border-bottom:1px solid var(--bor)}
+  .item:last-child{border-bottom:none}
+  .item:hover{background:rgba(255,255,255,.03)}
+  .del{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:1rem;line-height:1;padding:0 3px}
+  .empty{color:var(--mut);font-size:.78rem;padding:10px}
+  .cfg label{display:block;color:var(--mut);font-size:.75rem;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+  .cfg+.cfg{margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:6px}
+  th{background:rgba(79,110,247,.1);color:var(--acc2);font-size:.72rem;font-weight:700;
+     letter-spacing:.06em;padding:7px 12px;text-align:left;text-transform:uppercase;
+     border-bottom:1px solid var(--bor)}
+  td{border-top:1px solid var(--bor);padding:7px 12px}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .stat-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .stat{background:var(--bg);border:1px solid var(--bor);border-radius:6px;padding:8px 14px;font-size:.8rem}
+  .stat span{font-size:1.2rem;font-weight:700;color:var(--acc2);display:block}
+  #toast{position:fixed;bottom:18px;right:18px;background:var(--sur);border:1px solid var(--bor);
+         border-radius:8px;padding:9px 16px;font-size:.8rem;
+         transform:translateY(60px);opacity:0;transition:all .25s;z-index:999;max-width:320px}
+  #toast.show{transform:translateY(0);opacity:1}
+  #toast.ok{border-color:var(--grn);color:var(--grn)}
+  #toast.err{border-color:var(--red);color:var(--red)}
+  #toast.info{border-color:var(--acc);color:var(--acc2)}
+  .badge{font-size:.68rem;font-weight:600;padding:1px 6px;border-radius:4px;margin-left:6px}
+  .b-grn{background:rgba(62,207,142,.15);color:var(--grn)}
+  .b-red{background:rgba(224,82,96,.15);color:var(--red)}
+  .b-mut{background:rgba(123,128,160,.15);color:var(--mut)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>📅 Schedule Bot Admin</h1>
-  <p class="sub">Add topics &amp; people · Preview the schedule · Send to Slack</p>
+  <h1>📅 TAM Schedule Bot</h1>
+  <p class="sub">Weekly module assignments · Tam's team · Powered by TAM_Product_RTM</p>
 
-  <!-- Config card -->
-  <div class="card" style="margin-bottom:18px">
-    <h2>⚙️ Connection Config</h2>
-    <div class="cfg">
-      <label>Render API Base URL</label>
-      <input type="text" id="apiBase" placeholder="https://schedule-bot-api.onrender.com"/>
+  <!-- Connection config -->
+  <div class="card" style="margin-bottom:16px">
+    <h2>⚙️ Connection</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="cfg">
+        <label>Render API URL</label>
+        <input type="text" id="apiBase" placeholder="https://schedule-bot-api.onrender.com"/>
+      </div>
+      <div class="cfg">
+        <label>Admin Secret</label>
+        <input type="password" id="adminSecret" placeholder="your ADMIN_SECRET value"/>
+      </div>
     </div>
-    <div class="cfg">
-      <label>Admin Secret Token</label>
-      <input type="password" id="adminSecret" placeholder="Your ADMIN_SECRET value"/>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button onclick="saveConfig()">Save Config Locally</button>
+      <button class="outline" onclick="testConn()">Test Connection</button>
+      <button class="amber" onclick="resetToSeed()" title="Restores 26 RTM topics + 8 team members">↺ Reset to RTM data</button>
     </div>
-    <button onclick="saveConfig()" style="margin-top:12px;width:100%">
-      Save Config Locally</button>
+    <div id="connStatus" style="font-size:.75rem;color:var(--mut);margin-top:6px"></div>
   </div>
 
   <div class="grid">
     <!-- Topics -->
     <div class="card">
-      <h2>🗂 Topics</h2>
+      <h2>🗂 Topics <span id="topicCount" class="badge b-mut">0</span></h2>
       <div class="row">
-        <input type="text" id="topicInput" placeholder="e.g. API Testing Basics"
-          onkeydown="if(event.key==='Enter')add('topic')"/>
-        <button onclick="add('topic')">Add</button>
+        <input type="text" id="topicInput" placeholder="Add a topic..."
+               onkeydown="if(event.key==='Enter')addItem('topic')"/>
+        <button onclick="addItem('topic')">Add</button>
       </div>
-      <div class="list-box" id="topicList"><div class="empty">Loading...</div></div>
-      <div class="deck" id="deckInfo"></div>
+      <div class="list-box" id="topicList"><div class="empty">Loading…</div></div>
+      <div id="deckInfo" style="font-size:.72rem;color:var(--mut);margin-top:5px;font-family:var(--mono)"></div>
     </div>
 
     <!-- People -->
     <div class="card">
-      <h2>👤 People</h2>
+      <h2>👤 People <span id="personCount" class="badge b-mut">0</span></h2>
       <div class="row">
-        <input type="text" id="personInput" placeholder="e.g. Priya"
-          onkeydown="if(event.key==='Enter')add('person')"/>
-        <button onclick="add('person')">Add</button>
+        <input type="text" id="personInput" placeholder="Add a person..."
+               onkeydown="if(event.key==='Enter')addItem('person')"/>
+        <button onclick="addItem('person')">Add</button>
       </div>
-      <div class="list-box" id="personList"><div class="empty">Loading...</div></div>
+      <div class="list-box" id="personList"><div class="empty">Loading…</div></div>
     </div>
 
-    <!-- Preview -->
-    <div class="card prev-card">
-      <h2>📋 Next Week Preview</h2>
-      <p style="font-size:.82rem;color:var(--muted2)">
-        2 topics per person · No repeats until full list cycles through</p>
-      <div id="prevBox">
-        <div class="empty" style="padding:12px 0">
-          Click Generate Preview to see the schedule.</div>
+    <!-- Preview + Send -->
+    <div class="card full">
+      <h2>📋 Weekly preview <small style="font-weight:400;color:var(--mut);font-size:.8rem">(non-destructive — does not consume the deck)</small></h2>
+      <div id="previewBox">
+        <div class="empty" style="padding:12px 0">Click Generate Preview to see next week's assignments.</div>
       </div>
-      <div class="acts">
-        <button onclick="preview()">🔄 Generate Preview</button>
-        <button class="go" onclick="sendNow()">🚀 Send to Slack Now</button>
+      <div class="actions">
+        <button class="outline" onclick="loadPreview()">🔄 Generate Preview</button>
+        <button class="success" onclick="sendNow()">🚀 Send to Slack Now</button>
       </div>
     </div>
   </div>
@@ -131,117 +126,162 @@
 <div id="toast"></div>
 
 <script>
-const cfg=()=>({
-  base:(localStorage.getItem('wsb_base')||'').replace(/\/$/,''),
-  secret:localStorage.getItem('wsb_secret')||''
-});
-const hdrs=()=>({'Content-Type':'application/json','x-admin-secret':cfg().secret});
-
-window.addEventListener('DOMContentLoaded',()=>{
-  const c=cfg();
-  if(c.base)   document.getElementById('apiBase').value=c.base;
-  if(c.secret) document.getElementById('adminSecret').value=c.secret;
-  if(c.base) loadAll();
-});
-
-function saveConfig(){
-  const b=document.getElementById('apiBase').value.trim().replace(/\/$/,'');
-  const s=document.getElementById('adminSecret').value.trim();
-  if(!b){toast('API base URL is required','err');return;}
-  localStorage.setItem('wsb_base',b);
-  localStorage.setItem('wsb_secret',s);
-  toast('Config saved','ok');
-  loadAll();
-}
-
-async function api(path,method='GET',body=null){
-  const{base}=cfg();
-  if(!base){toast('Set API Base URL in Config first','err');throw new Error('no base');}
-  const o={method,headers:hdrs()};
-  if(body)o.body=JSON.stringify(body);
-  const r=await fetch(base+path,o);
-  if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);
-  return r.json();
-}
-
-function loadAll(){load('topic');load('person');}
-
-async function load(type){
-  const el=document.getElementById(type==='topic'?'topicList':'personList');
-  el.innerHTML='<div class="empty">Loading...</div>';
-  try{
-    const d=await api(`/api/${type}s`);
-    const items=d.items||[];
-    el.innerHTML=items.length
-      ?items.map(v=>`<div class="item"><span>${esc(v)}</span>
-        <button class="del" onclick="remove('${type}','${esc(v)}')">✕</button></div>`).join('')
-      :`<div class="empty">No ${type}s yet — add one above.</div>`;
-    if(type==='topic'&&d.total>0)
-      document.getElementById('deckInfo').textContent=
-        `Deck: ${d.deckUsed||0} / ${d.total} topics used this cycle`;
-  }catch(e){
-    el.innerHTML=`<div class="empty" style="color:var(--warn)">Error: ${esc(e.message)}</div>`;
+  // ── Config ───────────────────────────────────────────────────
+  function saveConfig() {
+    const base = document.getElementById('apiBase').value.trim().replace(/\/$/,'');
+    const sec  = document.getElementById('adminSecret').value.trim();
+    if (!base) { toast('API URL required','err'); return; }
+    localStorage.setItem('wsb_base', base);
+    localStorage.setItem('wsb_sec',  sec);
+    toast('Config saved','ok');
+    loadAll();
   }
-}
 
-async function add(type){
-  const id=type==='topic'?'topicInput':'personInput';
-  const inp=document.getElementById(id);
-  const v=inp.value.trim();
-  if(!v)return;
-  try{
-    await api(`/api/${type}s`,'POST',{value:v});
-    inp.value='';
-    await load(type);
-    toast(`${cap(type)} added`,'ok');
-  }catch(e){toast(`Failed: ${e.message}`,'err');}
-}
+  const cfg  = () => ({ base: localStorage.getItem('wsb_base')||'', sec: localStorage.getItem('wsb_sec')||'' });
+  const hdrs = () => ({'Content-Type':'application/json','x-admin-secret': cfg().sec});
 
-async function remove(type,value){
-  try{
-    await api(`/api/${type}s/remove`,'POST',{value});
-    await load(type);
-    toast(`${cap(type)} removed`,'ok');
-  }catch(e){toast(`Failed: ${e.message}`,'err');}
-}
+  window.addEventListener('DOMContentLoaded', () => {
+    const c = cfg();
+    if (c.base) document.getElementById('apiBase').value = c.base;
+    if (c.sec)  document.getElementById('adminSecret').value = c.sec;
+    if (c.base) loadAll();
+  });
 
-async function preview(){
-  const box=document.getElementById('prevBox');
-  box.innerHTML='<div class="empty" style="padding:12px 0">Generating...</div>';
-  try{
-    const d=await api('/api/preview');
-    if(!d.schedule||!d.schedule.length){
-      box.innerHTML=`<div class="empty" style="padding:12px 0;color:var(--warn)">
-        ${d.warning||'Add topics and people first.'}</div>`;return;
+  function loadAll() { loadList('topic'); loadList('person'); }
+
+  // ── API helper ───────────────────────────────────────────────
+  async function api(path, method='GET', body=null) {
+    const { base } = cfg();
+    if (!base) { toast('Set API URL and save config first','err'); throw new Error('no base'); }
+    const opts = { method, headers: hdrs() };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(base + path, opts);
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`${r.status}: ${txt}`);
     }
-    box.innerHTML=`<table><thead><tr>
-      <th>Person</th><th>Topics</th><th>Day</th></tr></thead><tbody>
-      ${d.schedule.map(r=>`<tr><td>${esc(r.person)}</td>
-        <td>${r.topics.map(t=>`<span class="badge">${esc(t)}</span>`).join('')}</td>
-        <td>${esc(r.day)}</td></tr>`).join('')}
-      </tbody></table>`;
-  }catch(e){
-    box.innerHTML=`<div class="empty" style="color:var(--warn);padding:12px 0">
-      Error: ${esc(e.message)}</div>`;
+    return r.json();
   }
-}
 
-async function sendNow(){
-  if(!confirm("Send this week's schedule to Slack now?"))return;
-  try{
-    await api('/api/notify','POST');
-    toast('Schedule sent to Slack ✓','ok');
-  }catch(e){toast(`Send failed: ${e.message}`,'err');}
-}
+  // ── Test connection ──────────────────────────────────────────
+  async function testConn() {
+    const el = document.getElementById('connStatus');
+    el.textContent = 'Testing…'; el.style.color = 'var(--mut)';
+    try {
+      const d = await api('/health');
+      el.textContent = `✓ Connected — ${d.topics} topics · ${d.people} people · server time ${d.ts}`;
+      el.style.color = 'var(--grn)';
+      toast('Connection OK','ok');
+    } catch(e) {
+      el.textContent = '✗ ' + e.message;
+      el.style.color = 'var(--red)';
+      toast('Connection failed','err');
+    }
+  }
 
-let tt;
-function toast(msg,type='ok'){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.className=`show ${type}`;
-  clearTimeout(tt);tt=setTimeout(()=>{el.className='';},2800);
-}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function cap(s){return s[0].toUpperCase()+s.slice(1);}
+  // ── Reset to seed data ───────────────────────────────────────
+  async function resetToSeed() {
+    if (!confirm('Reset to RTM seed data?\nThis restores all 26 topics + 8 team members.\nAny custom additions will be removed.')) return;
+    try {
+      const d = await api('/api/reset','POST');
+      toast(`Reset done — ${d.topics} topics · ${d.people} people`,'ok');
+      loadAll();
+    } catch(e) { toast('Reset failed: '+e.message,'err'); }
+  }
+
+  // ── Load list ────────────────────────────────────────────────
+  async function loadList(type) {
+    const listEl  = document.getElementById(type==='topic' ? 'topicList'   : 'personList');
+    const countEl = document.getElementById(type==='topic' ? 'topicCount'  : 'personCount');
+    listEl.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const d     = await api('/api/' + (type==='topic' ? 'topics' : 'people'));
+      const items = d.items || [];
+      countEl.textContent = items.length;
+      countEl.className   = 'badge ' + (items.length > 0 ? 'b-grn' : 'b-mut');
+      listEl.innerHTML = items.length
+        ? items.map(v => `<div class="item"><span>${esc(v)}</span>
+            <button class="del" onclick="remove('${type}','${esc(v).replace(/'/g,"\\'")}')">✕</button></div>`).join('')
+        : `<div class="empty">No ${type}s yet — click Add or use ↺ Reset.</div>`;
+      if (type==='topic' && d.deckRemaining !== undefined)
+        document.getElementById('deckInfo').textContent =
+          items.length ? `Deck: ${d.deckRemaining} of ${items.length} remaining until reshuffle` : '';
+    } catch(e) {
+      listEl.innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
+    }
+  }
+
+  // ── Add item ─────────────────────────────────────────────────
+  async function addItem(type) {
+    const inp = document.getElementById(type==='topic' ? 'topicInput' : 'personInput');
+    const v   = inp.value.trim();
+    if (!v) return;
+    try {
+      await api('/api/' + (type==='topic' ? 'topics' : 'people'), 'POST', { value: v });
+      inp.value = '';
+      await loadList(type);
+      toast(cap(type) + ' added','ok');
+    } catch(e) { toast('Failed: ' + e.message, 'err'); }
+  }
+
+  // ── Remove item ──────────────────────────────────────────────
+  async function remove(type, value) {
+    try {
+      await api('/api/' + (type==='topic' ? 'topics' : 'people') + '/remove', 'POST', { value });
+      await loadList(type);
+      toast(cap(type) + ' removed','ok');
+    } catch(e) { toast('Failed: ' + e.message, 'err'); }
+  }
+
+  // ── Preview ──────────────────────────────────────────────────
+  async function loadPreview() {
+    const box = document.getElementById('previewBox');
+    box.innerHTML = '<div class="empty" style="padding:12px 0">Generating…</div>';
+    try {
+      const d = await api('/api/preview');
+      if (!d.rows || !d.rows.length) {
+        box.innerHTML = `<div class="empty" style="padding:12px 0;color:var(--amber)">${d.warning||'No data.'}</div>`;
+        return;
+      }
+      box.innerHTML = `<table>
+        <thead><tr><th>#</th><th>Person</th><th>Topic 1</th><th>Topic 2</th></tr></thead>
+        <tbody>${d.rows.map((r,i) => `<tr>
+          <td style="color:var(--mut)">${i+1}</td>
+          <td><strong>${esc(r.person)}</strong></td>
+          <td>${esc(r.topic1)}</td>
+          <td>${esc(r.topic2)}</td>
+        </tr>`).join('')}</tbody></table>`;
+    } catch(e) {
+      box.innerHTML = `<div class="empty" style="color:var(--red);padding:12px 0">${esc(e.message)}</div>`;
+    }
+  }
+
+  // ── Send now ─────────────────────────────────────────────────
+  async function sendNow() {
+    if (!confirm("Send this week's assignments to Slack now?\nThis will consume topics from the deck.")) return;
+    try {
+      const d = await api('/api/notify','POST');
+      toast(`✓ Sent to Slack — ${d.rows.length} members assigned`,'ok');
+      loadList('topic'); // refresh deck count
+    } catch(e) { toast('Failed: ' + e.message, 'err'); }
+  }
+
+  // ── Toast ────────────────────────────────────────────────────
+  let tt;
+  function toast(msg, type='ok') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + type;
+    clearTimeout(tt);
+    tt = setTimeout(() => { el.className = 'toast'; }, 3500);
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function cap(s) { return s[0].toUpperCase() + s.slice(1); }
 </script>
 </body>
 </html>
