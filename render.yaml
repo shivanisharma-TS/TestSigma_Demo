@@ -1,10 +1,8 @@
 services:
-
-  # ── Web Service (API) ──────────────────────────────────────────
   - type: web
     name: schedule-bot-api
     runtime: node
-    plan: free            # free IS valid for web type
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
@@ -12,8 +10,8 @@ services:
       - key: NODE_ENV
         value: production
       - key: SLACK_WEBHOOK_URL
-        sync: false       # set manually in Render dashboard
+        sync: false
       - key: ADMIN_SECRET
-        sync: false       # set manually in Render dashboard
+        sync: false
       - key: CRON_SECRET
-        sync: false       # set manually in Render dashboard
+        sync: false
